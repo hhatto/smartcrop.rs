@@ -1,9 +1,6 @@
-extern crate image;
-
 use std::clone::Clone;
 use std::path::Path;
-use std::fs::File;
-use image::{GenericImage, DynamicImage, Rgb, Rgba, ImageBuffer, ImageRgb8};
+use image::{GenericImageView, DynamicImage, Rgb, Rgba, ImageBuffer};
 
 
 #[derive(Debug)]
@@ -161,7 +158,7 @@ impl SmartCrop {
             // img = 100x100, width = 95x95, scale = 100/95, 1/scale > min
             // don't set minscale smaller than 1/scale
             // -> don't pick crops that need upscaling
-            options.min_scale = f64::min(options.max_scale, f64::max(1. / scale, (options.min_scale)));
+            options.min_scale = f64::min(options.max_scale, f64::max(1. / scale, options.min_scale));
         }
 
         if options.width != 0 && options.height != 0 && options.prescale != false {
@@ -169,9 +166,9 @@ impl SmartCrop {
             if prescale < 1. {
                 img = img.resize((img_width as f64 * prescale) as u32,
                                  (img_height as f64 * prescale) as u32,
-                                 image::FilterType::Lanczos3);
-                let ref mut fout = File::create(&Path::new("debug.thumb.jpg")).unwrap();
-                let _ = img.save(fout, image::JPEG);
+                                 image::imageops::FilterType::Lanczos3);
+                let p = &Path::new("debug.thumb.jpg");
+                let _ = img.save(p);
                 self.crop_width = f64::floor(options.crop_width as f64 * prescale) as i32;
                 self.crop_height = f64::floor(options.crop_height as f64 * prescale) as i32;
             } else {
@@ -350,10 +347,10 @@ impl SmartCrop {
         self.detect_skin(&img, &mut output);
         self.detect_saturation(&img, &mut output);
 
-        let score_output = ImageRgb8(output)
+        let score_output = DynamicImage::ImageRgb8(output)
             .resize(((size_x as f64 / self.score_down_sample as f64) as f64).ceil() as u32,
                     ((size_y as f64 / self.score_down_sample as f64) as f64).ceil() as u32,
-                    image::FilterType::Lanczos3);
+                    image::imageops::FilterType::Lanczos3);
 
         let mut top_score = i32::min_value() as f64;
         let mut top_crop: Option<CropInfo> = None;
